@@ -307,9 +307,67 @@ const startCapture = function() {
   });
 };
 
+const startCaptureAtTab = function(tabId) {
+
+      if(!sessionStorage.getItem(tabId)) {
+        sessionStorage.setItem(tabId, Date.now());
+        chrome.storage.sync.get({
+          maxTime: 1200000,
+          muteTab: false,
+          format: "mp3",
+          quality: 192,
+          limitRemoved: false
+        }, (options) => {
+          let time = options.maxTime;
+          if(time > 1200000) {
+            time = 1200000
+          }
+          audioCapture(time, options.muteTab, options.format, options.quality, options.limitRemoved);
+        });
+        chrome.runtime.sendMessage({captureStarted: tabId, startTime: Date.now()});
+      }
+};
+
+
+const attachToSpotify = function() {
+  chrome.tabs.query({url: 'https://*.spotify.com/*'}, function(tabs) {
+
+    // Open a spotify tab if one does not exist yet.
+    if (tabs.length === 0) {
+      chrome.tabs.create({url: 'https://open.spotify.com'});
+    }
+
+    // Apply command on all spotify tabs.
+    for (var tab of tabs) {
+
+      var code = `
+
+var targetNode = document.querySelector('.track-info__name > .react-contextmenu-wrapper > a');
+
+var config = { attributes: true, childList: true, characterData: true, characterDataOldValue: true };
+
+var callback = function(mutationsList) {
+    chrome.runtime.sendMessage("stopCapture");
+    setTimeout(()=>{chrome.runtime.sendMessage("startCapture");},1000);
+};
+
+var observer = new MutationObserver(callback);
+
+observer.observe(targetNode, config);
+`;
+
+
+        chrome.tabs.executeScript(tab.id, {code: code});
+      
+    }
+
+    
+  });
+}
+
 
 chrome.commands.onCommand.addListener((command) => {
   if (command === "start") {
-    startCapture();
+    attachToSpotify();
   }
 });

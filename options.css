@@ -67,6 +67,10 @@ label {
   border-radius: 5px;
 }
 
+.buttonContainer {
+  display: flex;
+}
+
 .button:hover {
   color: red;
   background-color: darkred;

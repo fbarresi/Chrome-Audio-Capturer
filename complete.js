@@ -40,8 +40,25 @@ document.addEventListener('DOMContentLoaded', () => {
     if(request.type === "encodingProgress" && encoding) {
       encodeProgress.style.width = `${request.progress * 100}%`;
     }
+
     function generateSave(url) { //creates the save button
+
+      chrome.storage.sync.get({
+          autodownload: true,
+        }, (options) => {
+          if(options.autodownload) {
+            chrome.downloads.download({url: url, filename: `${currentDate}.${format}`}, 
+              ()=>{
+                    chrome.tabs.getCurrent((tab) => {
+                      chrome.tabs.remove(tab.id);
+                    });
+                  }
+            );
+          }
+        });
+
       const currentDate = new Date(Date.now()).toDateString();
+      
       saveButton.onclick = () => {
         chrome.downloads.download({url: url, filename: `${currentDate}.${format}`, saveAs: true});
       };

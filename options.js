@@ -1,7 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
   const mute = document.getElementById('mute');
+  const autodownload = document.getElementById('autodownload');
   const maxTime = document.getElementById('maxTime');
   const save = document.getElementById('save');
+  const closeButton = document.getElementById('close');
   const status = document.getElementById('status');
   const mp3Select = document.getElementById('mp3');
   const wavSelect = document.getElementById('wav');
@@ -12,12 +14,14 @@ document.addEventListener('DOMContentLoaded', () => {
   //initial settings
   chrome.storage.sync.get({
     muteTab: false,
+    autodownload: true,
     maxTime: 1200000,
     format: "mp3",
     quality: 192,
     limitRemoved: false
   }, (options) => {
     mute.checked = options.muteTab;
+    autodownload.checked = options.autodownload;
     limitRemoved.checked = options.limitRemoved;
     maxTime.disabled = options.limitRemoved;
     maxTime.value = options.maxTime/60000;
@@ -38,6 +42,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   mute.onchange = () => {
+    status.innerHTML = "";
+  }
+
+  autodownload.onchange = () => {
     status.innerHTML = "";
   }
 
@@ -81,6 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
   save.onclick = () => {
     chrome.storage.sync.set({
       muteTab: mute.checked,
+      autodownload: autodownload.checked,
       maxTime: maxTime.value*60000,
       format: currentFormat,
       quality: quality.value,
@@ -88,4 +97,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     status.innerHTML = "Settings saved!"
   }
+
+  closeButton.onclick = () => {
+    chrome.tabs.getCurrent((tab) => {
+        chrome.tabs.remove(tab.id);
+    });
+  }
+
 });
+
+
