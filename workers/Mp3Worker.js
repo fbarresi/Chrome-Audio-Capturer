@@ -71,10 +71,36 @@ function finish() {
   cleanup();
 };
 
+function saveAndContinue() {
+  if (recBuffers) {
+    let swappedBuffer = recBuffers;
+    recBuffers = [];
+    encoder = new Mp3LameEncoder(sampleRate, options.mp3.bitRate);
+    let timeout = Date.now() + options.progressInterval;
+    while (swappedBuffer.length > 0) {
+      encoder.encode(swappedBuffer.shift());
+      let now = Date.now();
+      if (now > timeout) {
+        timeout = now + options.progressInterval;
+      }
+    }
+  }
+  self.postMessage({
+    command: "complete",
+    blob: encoder.finish(options.mp3.mimeType)
+  });
+  cleanCount();
+};
+
 function cleanup() {
   encoder = recBuffers = undefined;
   bufferCount = 0;
 }
+
+function cleanCount() {
+  encoder = undefined;
+  bufferCount = 0;
+};
 
 self.onmessage = function(event) {
   let data = event.data;
@@ -84,6 +110,7 @@ self.onmessage = function(event) {
     case "start":   start(data.bufferSize);     break;
     case "record":  record(data.buffer);        break;
     case "finish":  finish();                   break;
+    case "saveAndContinue":  saveAndContinue(); break;
     case "cancel":  cleanup();
   }
 };
