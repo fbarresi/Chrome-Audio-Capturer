@@ -115,8 +115,8 @@ class Recorder {
   }
 
   saveAndContinueRecording() {
+      console.log("thrown saveAndContinue");
       this.worker.postMessage({ command: "saveAndContinue" });
-    }
   }
 
   cancelEncoding() {
@@ -147,6 +147,8 @@ class Recorder {
           break;
         case "complete":
           _this.onComplete(_this, data.blob);
+        case "save":
+          _this.onSave(_this, data.blob);
       }
     }
     this.worker.postMessage({
@@ -165,7 +167,7 @@ class Recorder {
   onEncodingProgress(recorder, progress) {}
   onEncodingCanceled(recorder) {}
   onComplete(recorder, blob) {}
-
+  onSave(recorder, blob) {}
 }
 
 const audioCapture = (timeLimit, muteTab, format, quality, limitRemoved) => {
@@ -207,13 +209,14 @@ const audioCapture = (timeLimit, muteTab, format, quality, limitRemoved) => {
       }
     }
     function onSaveAndContinue(request){
-      if (command === "saveAndContinue") {
+      if (request === "saveAndContinue") {
+        console.log("thrown saveAndContinue");
         saveAndContinue();
       }
     }
 
     chrome.commands.onCommand.addListener(onStopCommand);
-    chrome.commands.onCommand.addListener(onSaveAndContinue);
+    chrome.runtime.onMessage.addListener(onSaveAndContinue);
     chrome.runtime.onMessage.addListener(onStopClick);
 
     mediaRecorder.onComplete = (recorder, blob) => {
@@ -223,6 +226,13 @@ const audioCapture = (timeLimit, muteTab, format, quality, limitRemoved) => {
       }
       mediaRecorder = null;
     }
+
+    mediaRecorder.onSave = (recorder, blob) => {
+      console.log("save");
+      audioURL = window.URL.createObjectURL(blob);
+      chrome.downloads.download({url: audioURL, filename: `test.mp3`});
+    }
+
     mediaRecorder.onEncodingProgress = (recorder, progress) => {
       if(completeTabID) {
         chrome.tabs.sendMessage(completeTabID, {type: "encodingProgress", progress: progress});
@@ -249,7 +259,9 @@ const audioCapture = (timeLimit, muteTab, format, quality, limitRemoved) => {
     }
 
     const saveAndContinue = function() {
+      console.log("thrown saveAndContinue");
       if(mediaRecorder){
+        console.log("thrown saveAndContinue");
         mediaRecorder.saveAndContinueRecording();
       }
     }
@@ -360,7 +372,7 @@ const attachToSpotify = function() {
     for (var tab of tabs) {
 
       var code = `
-
+        chrome.runtime.sendMessage("startCapture");
         var targetNode = document.querySelector('.track-info__name > .react-contextmenu-wrapper > a');
 
         var config = { attributes: true, childList: true, characterData: true, characterDataOldValue: true };

@@ -72,24 +72,26 @@ function finish() {
 };
 
 function saveAndContinue() {
+  console.log("jeah!");
   if (recBuffers) {
     let swappedBuffer = recBuffers;
     recBuffers = [];
-    encoder = new Mp3LameEncoder(sampleRate, options.mp3.bitRate);
+    let partialEncoder = new Mp3LameEncoder(sampleRate, options.mp3.bitRate);
     let timeout = Date.now() + options.progressInterval;
     while (swappedBuffer.length > 0) {
-      encoder.encode(swappedBuffer.shift());
+      partialEncoder.encode(swappedBuffer.shift());
       let now = Date.now();
       if (now > timeout) {
         timeout = now + options.progressInterval;
       }
     }
+  
+    self.postMessage({
+      command: "save",
+      blob: partialEncoder.finish(options.mp3.mimeType)
+    });
+    cleanCount();
   }
-  self.postMessage({
-    command: "complete",
-    blob: encoder.finish(options.mp3.mimeType)
-  });
-  cleanCount();
 };
 
 function cleanup() {
@@ -110,7 +112,7 @@ self.onmessage = function(event) {
     case "start":   start(data.bufferSize);     break;
     case "record":  record(data.buffer);        break;
     case "finish":  finish();                   break;
-    case "saveAndContinue":  saveAndContinue(); break;
+    case "saveAndContinue":  console.log("jeah!");saveAndContinue(); break;
     case "cancel":  cleanup();
   }
 };
