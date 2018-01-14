@@ -114,6 +114,11 @@ class Recorder {
     }
   }
 
+  saveAndContinueRecording() {
+      this.worker.postMessage({ command: "saveAndContinue" });
+    }
+  }
+
   cancelEncoding() {
     if (this.options.encodeAfterRecord)
       if (!this.isRecording()) {
@@ -201,8 +206,16 @@ const audioCapture = (timeLimit, muteTab, format, quality, limitRemoved) => {
         }
       }
     }
+    function onSaveAndContinue(request){
+      if (command === "saveAndContinue") {
+        saveAndContinue();
+      }
+    }
+
     chrome.commands.onCommand.addListener(onStopCommand);
+    chrome.commands.onCommand.addListener(onSaveAndContinue);
     chrome.runtime.onMessage.addListener(onStopClick);
+
     mediaRecorder.onComplete = (recorder, blob) => {
       audioURL = window.URL.createObjectURL(blob);
       if(completeTabID) {
@@ -235,6 +248,12 @@ const audioCapture = (timeLimit, muteTab, format, quality, limitRemoved) => {
       })
     }
 
+    const saveAndContinue = function() {
+      if(mediaRecorder){
+        mediaRecorder.saveAndContinueRecording();
+      }
+    }
+
     const cancelCapture = function() {
       let endTabId;
       chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
@@ -246,7 +265,7 @@ const audioCapture = (timeLimit, muteTab, format, quality, limitRemoved) => {
       })
     }
 
-//removes the audio context and closes recorder to save memory
+    //removes the audio context and closes recorder to save memory
     const closeStream = function(endTabId) {
       chrome.commands.onCommand.removeListener(onStopCommand);
       chrome.runtime.onMessage.removeListener(onStopClick);
@@ -342,19 +361,18 @@ const attachToSpotify = function() {
 
       var code = `
 
-var targetNode = document.querySelector('.track-info__name > .react-contextmenu-wrapper > a');
+        var targetNode = document.querySelector('.track-info__name > .react-contextmenu-wrapper > a');
 
-var config = { attributes: true, childList: true, characterData: true, characterDataOldValue: true };
+        var config = { attributes: true, childList: true, characterData: true, characterDataOldValue: true };
 
-var callback = function(mutationsList) {
-    chrome.runtime.sendMessage("stopCapture");
-    setTimeout(()=>{chrome.runtime.sendMessage("startCapture");},1000);
-};
+        var callback = function(mutationsList) {
+            chrome.runtime.sendMessage("saveAndContinue");
+        };
 
-var observer = new MutationObserver(callback);
+        var observer = new MutationObserver(callback);
 
-observer.observe(targetNode, config);
-`;
+        observer.observe(targetNode, config);
+      `;
 
 
         chrome.tabs.executeScript(tab.id, {code: code});
